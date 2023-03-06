@@ -1,0 +1,621 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library("DESeq2")
+
+# get count dataset
+count_matrix <- as.matrix(read.csv("~/Desktop/HM5_dilution_counts+1_min0.05_deseq.csv", row.names = "OTUID"))
+# view first two rows
+head(count_matrix, 2)
+
+# drop length column
+#count_matrix <- count_matrix[, -7]
+#head(count_matrix, 2)
+
+```
+
+```{r}
+
+coldata <- data.frame(
+   sample = c("HM5M3D5", "HM5M6D5", "HM5M8D5","HM5M1D5", "HM5M4D5","HM5M9D5" ),
+   condition = c("Control",  "Control", "Control", "Dilution", "Dilution", "Dilution"), 
+  row.names = "sample" )
+coldata$condition <- as.factor(coldata$condition)
+
+all(rownames(coldata) %in% colnames(count_matrix))
+
+
+all(rownames(coldata) == colnames(count_matrix))
+
+
+```
+#create deseq file
+```{r}
+
+dds <- DESeqDataSetFromMatrix(countData = count_matrix, colData = coldata, 
+                              design = ~ condition)
+
+```
+#Remove low count reads
+```{r}
+
+#dds <- dds[rowSums(counts(dds)) >= 10,]
+
+```
+
+#set control treatment as reference
+```{r}
+# set control condition as reference
+dds$condition <- relevel(dds$condition, ref = "Control")
+
+```
+
+
+#Run DESEQ
+```{r}
+dds <- DESeq(dds)
+
+# see all comparisons (here there is only one)
+resultsNames(dds)
+
+# get gene expression table
+# at this step independent filtering is applied by default to remove low count genes
+# independent filtering can be turned off by passing independentFiltering=FALSE to results
+res <- results(dds)  # same as results(dds, name="condition_infected_vs_control") or results(dds, contrast = c("condition", "infected", "control") )
+res
+
+```
+
+
+#Save results
+```{r}
+
+write.csv(as.data.frame(res[order(res$padj),] ), file="condition_Dilution_vs_Control_counts+1.csv")
+
+```
+
+#Get summary of significant genes
+```{r}
+
+summary(results(dds, alpha=0.05))
+
+```
+
+
+#Get normalized counts
+```{r}
+
+normalized_counts <- counts(dds, normalized=TRUE)
+head(normalized_counts)
+
+write.csv(normalized_counts, "~/Desktop/Deseq_dilution_normalized_counts.csv")
+```
+
+
+
+
+#The shrinkage of effect size (LFC) helps to remove the low count genes (by shrinking towards zero). The low or highly variable read count genes can give large estimates of LFCs which may not represent true difference in changes in gene expression between two conditions.
+```{r}
+resLFC <- lfcShrink(dds, coef="condition_Dilution_vs_Control", type="apeglm")
+head(resLFC)
+
+
+```
+```{r}
+
+res1 <- results(dds, name="condition_Dilution_vs_Control")
+
+#to shrink log fold changes association with condition:
+resLFC1 <- lfcShrink(dds, coef="condition_Dilution_vs_Control")
+
+
+#summary of counts of p values <0.05
+res05 <- results(dds, alpha=0.05)
+summary(res05)
+sum(res05$padj < 0.05, na.rm=TRUE)
+
+
+#reorder and plot
+resOrdered1 <- resLFC1[order(resLFC1$pvalue),]
+summary(resOrdered1)
+sum(resOrdered1$padj < 0.05, na.rm=TRUE)
+plotMA(resOrdered1)
+
+
+
+#export data
+resSig1 <- subset(resOrdered1, padj < 0.05)
+write.csv(as.data.frame(resOrdered1), 
+          file="HM5_day5_treatment_dilution_vs_control.csv")
+
+```
+
+
+#Visualize the shrinkage estimation of LFCs with MA plot and compare it without shrinkage of LFCs,
+```{r}
+
+par(mfrow = c(1, 2))
+plotMA(resLFC, main="Shrinkage of LFCs", ylim=c(-4,4))
+plotMA(res, main="No shrinkage of LFCs", ylim=c(-4,4))
+```
+
+
+
+
+###DOM
+```{r}
+# get count dataset
+count_matrix <- as.matrix(read.csv("~/Desktop/HM5_deseq_counts+1_min0.05%/HM5_DOM_counts+1_min0.05_deseq.csv", row.names = "OTUID"))
+# view first two rows
+head(count_matrix, 2)
+
+# drop length column
+#count_matrix <- count_matrix[, -7]
+#head(count_matrix, 2)
+
+```
+
+```{r}
+
+coldata <- data.frame(
+   sample = c("HM5M3D5", "HM5M6D5", "HM5M8D5","HM5M2D5", "HM5M5D5","HM5M7D5" ),
+   condition = c("Control",  "Control", "Control", "DOM", "DOM", "DOM"), 
+  row.names = "sample" )
+coldata$condition <- as.factor(coldata$condition)
+
+all(rownames(coldata) %in% colnames(count_matrix))
+
+
+all(rownames(coldata) == colnames(count_matrix))
+
+
+```
+#create deseq file
+```{r}
+
+dds <- DESeqDataSetFromMatrix(countData = count_matrix, colData = coldata, 
+                              design = ~ condition)
+
+```
+#Remove low count reads
+```{r}
+
+#dds <- dds[rowSums(counts(dds)) >= 10,]
+
+```
+
+#set control treatment as reference
+```{r}
+# set control condition as reference
+dds$condition <- relevel(dds$condition, ref = "Control")
+
+```
+
+
+#Run DESEQ
+```{r}
+dds <- DESeq(dds)
+
+# see all comparisons (here there is only one)
+resultsNames(dds)
+
+# get gene expression table
+# at this step independent filtering is applied by default to remove low count genes
+# independent filtering can be turned off by passing independentFiltering=FALSE to results
+res <- results(dds)  # same as results(dds, name="condition_infected_vs_control") or results(dds, contrast = c("condition", "infected", "control") )
+res
+
+```
+
+
+#Save results
+```{r}
+
+write.csv(as.data.frame(res[order(res$padj),] ), file="condition_DOM_vs_Control_counts+1.csv")
+
+```
+
+#Get summary of significant genes
+```{r}
+
+summary(results(dds, alpha=0.05))
+
+```
+
+```{r}
+#heatmap of responding taxa
+library("vegan")
+library("RColorBrewer")
+library("reshape2")
+library("ggplot2")
+library("gplots")
+library("gridExtra")
+library("ellipse")
+library("heatmap.plus")
+library("DESeq2")
+```
+
+
+```{r}
+domresults <- read.csv('~/Desktop/HM5_dom_sigresults.csv', header=T)
+
+domresults$ASV <- factor(domresults$ASV, levels = domresults$ASV[order(domresults$Order)])
+domresults$ASV  # notice the changed order of factor levels
+
+dom=ggplot(domresults, aes(x = as.factor(ASV), y = log2FoldChange)) + 
+   geom_point(aes(color=factor(sign(log2FoldChange)))) +
+ scale_color_manual(values = c("blue", "black", "red"),
+                     breaks = c("-1", "0", "1"))+  
+  geom_errorbar(aes(ymin=log2FoldChange-lfcSE, ymax=log2FoldChange+lfcSE), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme( panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12), panel.border = element_rect(colour = "black", fill=NA, size=1), legend.position="none")+ coord_flip()
+
+```
+
+```{r}
+dilresults <- read.csv('~/Desktop/HM5_dil_sigresults.csv', header=T)
+
+dilresults$ASV <- factor(dilresults$ASV, levels = dilresults$ASV[order(dilresults$Order)])
+dilresults$ASV  # notice the changed order of factor levels
+
+dil = ggplot(dilresults, aes(x = as.factor(ASV), y = log2FoldChange)) + 
+   geom_point(aes(color=factor(sign(log2FoldChange)))) +
+ scale_color_manual(values = c("blue", "black", "red"),
+                     breaks = c("-1", "0", "1"))+  
+  geom_errorbar(aes(ymin=log2FoldChange-lfcSE, ymax=log2FoldChange+lfcSE), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme( panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12), panel.border = element_rect(colour = "black", fill=NA, size=1), legend.position="none")+ coord_flip()
+
+```
+
+
+```{r}
+
+svg("~/Desktop/HM5_deseq_scatterplot.svg", height=8, width=12)
+ggarrange(dil, dom, labels=c("A", "B"), nrow=1, ncol=2)
+dev.off()
+```
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+
+otu100 <- read.csv('~/Desktop/HM5_dom_sigresults.csv', row.names=1)
+otu <- as.matrix(otu100)
+#longData <- melt(otu)
+#head(longData, 10)
+
+myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")), space="Lab")
+
+#heatmap.2(otu, trace="none", scale="none", Rowv="none", Colv="none", col=myPalette(100), cexRow=0.6, cexCol=1, margins=c(7,30), key.title="Color Scale", key.xlab="x", key.ylab=NA)
+heatmap.2(otu, trace="none", scale="none", Colv="none", col=myPalette(100), cexRow=0.5, cexCol=1, margins=c(7,25), key.title="Color Scale", key.xlab="x", key.ylab=NA)
+
+
+#legend(-1, 1, legend=c("1", "2"), fill=c("#808080", "#FFC0CB"), cex=0.5)
+
+```
+
+
+
+
+
+
+
+
+###phylogenetic tree for deseq significant ASVs
+
+```{r}
+## load the phylogenetic tree of top 200 OTU
+phylo = read.tree("~/Desktop/hm5_deseq_seqs_aligned_phy_phyml_tree.txt");
+phylo; # a summary of the phylogeny
+plot.phylo(phylo,typ="fan"); # a quick plot
+```
+
+
+
+###phylogenetic tree of only DOM significant ASVs
+```{r}
+library(castor)
+domtree=get_subtree_with_tips(phylo, only_tips=c( "40207", "24431", "38543", "38590", "38523", "16962", "39038", "32259", "17277", "23744", "40701", "40706", "25473", "9387", "36717", "26301", "26321", "40738", "25941", "26362", "36404", "36479", "32078",  "38061",  "29312", "Thermus_aquaticus_strain_YT-1_16S_ribosomal_RNA"))
+
+```
+
+
+
+```{r}
+plot.phylo(domtree$subtree)
+```
+
+```{r}
+
+write.tree(domtree$subtree, "~/Desktop/HM5_deseq_DOM_tree.txt")
+```
+
+
+
+#Tree for deseq dilution results
+```{r}
+
+diltree=get_subtree_with_tips(phylo, only_tips=c( "32528", "40207", "34461", "24431", "32898", "39276", "30983", "31140", "39218", "39265", "18279", "18352", "37313", "39658", "27634", "27499", "10986", "10988", "27637", "10917", "27496", "23744", "26096",  "40738",  "26664", "25473", "25402", "36293", "7692", "25529", "26321", "26809", "8493", "26101", "7972", "9220", "33018", "33014", "32078", "32139", "10517", "16175", "32146", "24253", "33179", "39370", "40417", "40466",  "37930",  "29619","29878", "29758", "29219", "38061", "13071", "40736", "40686", "Thermus_aquaticus_strain_YT-1_16S_ribosomal_RNA"))
+
+
+```
+
+
+
+```{r}
+plot.phylo(diltree$subtree)
+```
+
+```{r}
+
+write.tree(diltree$subtree, "~/Desktop/HM5_deseq_dilution_tree.txt")
+```
+
+
+##Deseq on dilution and control day 0
+```{r}
+library("DESeq2")
+
+# get count dataset
+count_matrix <- as.matrix(read.csv("~/Desktop/HM5_dilution_counts+1+min0.05_deseq_day0.csv", row.names = "OTUID"))
+# view first two rows
+head(count_matrix, 2)
+
+# drop length column
+#count_matrix <- count_matrix[, -7]
+#head(count_matrix, 2)
+
+```
+
+```{r}
+
+coldata <- data.frame(
+   sample = c("HM5M3D5", "HM5M6D5", "HM5M8D5","HM5M1D5", "HM5M4D5","HM5M9D5" ),
+   condition = c("Control",  "Control", "Control", "Dilution", "Dilution", "Dilution"), 
+  row.names = "sample" )
+coldata$condition <- as.factor(coldata$condition)
+
+all(rownames(coldata) %in% colnames(count_matrix))
+
+
+all(rownames(coldata) == colnames(count_matrix))
+
+
+```
+#create deseq file
+```{r}
+
+dds <- DESeqDataSetFromMatrix(countData = count_matrix, colData = coldata, 
+                              design = ~ condition)
+
+```
+#Remove low count reads
+```{r}
+
+#dds <- dds[rowSums(counts(dds)) >= 10,]
+
+```
+
+#set control treatment as reference
+```{r}
+# set control condition as reference
+dds$condition <- relevel(dds$condition, ref = "Control")
+
+```
+
+
+#Run DESEQ
+```{r}
+dds <- DESeq(dds)
+
+# see all comparisons (here there is only one)
+resultsNames(dds)
+
+# get gene expression table
+# at this step independent filtering is applied by default to remove low count genes
+# independent filtering can be turned off by passing independentFiltering=FALSE to results
+res <- results(dds)  # same as results(dds, name="condition_infected_vs_control") or results(dds, contrast = c("condition", "infected", "control") )
+res
+
+```
+
+
+#Save results
+```{r}
+
+write.csv(as.data.frame(res[order(res$padj),] ), file="condition_Dilution_vs_Control_counts+1_day0.csv")
+
+```
+
+#Get summary of significant genes
+```{r}
+
+summary(results(dds, alpha=0.05))
+
+```
+
+
+#Get normalized counts
+```{r}
+
+normalized_counts <- counts(dds, normalized=TRUE)
+head(normalized_counts)
+
+write.csv(normalized_counts, "~/Desktop/Deseq_dilution_normalized_counts.csv")
+```
+
+
+
+
+#The shrinkage of effect size (LFC) helps to remove the low count genes (by shrinking towards zero). The low or highly variable read count genes can give large estimates of LFCs which may not represent true difference in changes in gene expression between two conditions.
+```{r}
+resLFC <- lfcShrink(dds, coef="condition_Dilution_vs_Control", type="apeglm")
+head(resLFC)
+
+
+```
+```{r}
+
+res1 <- results(dds, name="condition_Dilution_vs_Control")
+
+#to shrink log fold changes association with condition:
+resLFC1 <- lfcShrink(dds, coef="condition_Dilution_vs_Control")
+
+
+#summary of counts of p values <0.05
+res05 <- results(dds, alpha=0.05)
+summary(res05)
+sum(res05$padj < 0.05, na.rm=TRUE)
+
+
+#reorder and plot
+resOrdered1 <- resLFC1[order(resLFC1$pvalue),]
+summary(resOrdered1)
+sum(resOrdered1$padj < 0.05, na.rm=TRUE)
+plotMA(resOrdered1)
+
+
+
+#export data
+resSig1 <- subset(resOrdered1, padj < 0.05)
+write.csv(as.data.frame(resOrdered1), 
+          file="HM5_day0_treatment_dilution_vs_control.csv")
+
+```
+
+
+##Deseq on DOM and control day 0
+```{r}
+library("DESeq2")
+
+# get count dataset
+count_matrix <- as.matrix(read.csv("~/Desktop/HM5_DOM_counts+1+min0.05_deseq_day0.csv", row.names = "OTUID"))
+# view first two rows
+head(count_matrix, 2)
+
+# drop length column
+#count_matrix <- count_matrix[, -7]
+#head(count_matrix, 2)
+
+```
+
+```{r}
+
+coldata <- data.frame(
+   sample = c("HM5M3D5", "HM5M6D5", "HM5M8D5","HM5M2D5", "HM5M5D5","HM5M7D5" ),
+   condition = c("Control",  "Control", "Control", "DOM", "DOM", "DOM"), 
+  row.names = "sample" )
+coldata$condition <- as.factor(coldata$condition)
+
+all(rownames(coldata) %in% colnames(count_matrix))
+
+
+all(rownames(coldata) == colnames(count_matrix))
+
+
+```
+#create deseq file
+```{r}
+
+dds <- DESeqDataSetFromMatrix(countData = count_matrix, colData = coldata, 
+                              design = ~ condition)
+
+```
+#Remove low count reads
+```{r}
+
+#dds <- dds[rowSums(counts(dds)) >= 10,]
+
+```
+
+#set control treatment as reference
+```{r}
+# set control condition as reference
+dds$condition <- relevel(dds$condition, ref = "Control")
+
+```
+
+
+#Run DESEQ
+```{r}
+dds <- DESeq(dds)
+
+# see all comparisons (here there is only one)
+resultsNames(dds)
+
+# get gene expression table
+# at this step independent filtering is applied by default to remove low count genes
+# independent filtering can be turned off by passing independentFiltering=FALSE to results
+res <- results(dds)  # same as results(dds, name="condition_infected_vs_control") or results(dds, contrast = c("condition", "infected", "control") )
+res
+
+```
+
+
+#Save results
+```{r}
+
+write.csv(as.data.frame(res[order(res$padj),] ), file="condition_Dilution_vs_Control_counts+1_day0.csv")
+
+```
+
+#Get summary of significant genes
+```{r}
+
+summary(results(dds, alpha=0.05))
+
+```
+
+
+
+
+#The shrinkage of effect size (LFC) helps to remove the low count genes (by shrinking towards zero). The low or highly variable read count genes can give large estimates of LFCs which may not represent true difference in changes in gene expression between two conditions.
+```{r}
+resLFC <- lfcShrink(dds, coef="condition_DOM_vs_Control", type="apeglm")
+head(resLFC)
+
+
+```
+```{r}
+
+res1 <- results(dds, name="condition_DOM_vs_Control")
+
+#to shrink log fold changes association with condition:
+resLFC1 <- lfcShrink(dds, coef="condition_DOM_vs_Control")
+
+
+#summary of counts of p values <0.05
+res05 <- results(dds, alpha=0.05)
+summary(res05)
+sum(res05$padj < 0.05, na.rm=TRUE)
+
+
+#reorder and plot
+resOrdered1 <- resLFC1[order(resLFC1$pvalue),]
+summary(resOrdered1)
+sum(resOrdered1$padj < 0.05, na.rm=TRUE)
+plotMA(resOrdered1)
+
+
+
+#export data
+resSig1 <- subset(resOrdered1, padj < 0.05)
+write.csv(as.data.frame(resOrdered1), 
+          file="HM5_day0_treatment_DOM_vs_control.csv")
+
+```
