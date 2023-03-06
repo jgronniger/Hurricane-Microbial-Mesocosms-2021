@@ -1,0 +1,394 @@
+---
+title: "HM5"
+author: "Jessica Gronniger"
+date: "12/01/2019"
+output: html_document
+---
+
+```{r}
+
+library(phyloseq)
+library(ggplot2)
+library(tidyverse)
+library(scales)
+
+```
+
+
+```{r}
+
+nano <- import_biom("~/Desktop/HM5_ASV_absabundance.biom")
+
+```
+
+```{r}
+hm <- merge_phyloseq(nano)
+colnames(tax_table(hm)) <- c("Kingdom", "Phylum", "Class", "Order", "Family",  "Genus", "Species")
+
+```
+
+```{r}
+
+```
+
+```{r}
+plot_bar(hm, fill="Kingdom")
+
+```
+
+
+
+
+```{r}
+
+hmglom <- tax_glom(hm, taxrank="Family")
+
+hmprop <- transform_sample_counts(hmglom, function(otu) otu/sum(otu))
+
+```
+
+```{r}
+
+sample_data(hmglom)$Type <- HMmeta$Type
+```
+
+
+```{r}
+minTotRelAbun = 1e-5
+x = taxa_sums(hmglom)
+keepTaxa = which((x / sum(x)) > minTotRelAbun)
+s = rownames(keepTaxa)
+prunedSet = prune_samples(keepTaxa, hmglom)
+```
+
+```{r}
+hmmelt<-psmelt(hmprop)
+
+```
+
+```{r}
+othermelt = hmmelt
+#hmmelt$Family <- as.character(hmmelt$Family)
+othermelt$Family[othermelt$Abundance < 0.01] <- "Other"
+
+```
+
+```{r}
+othermelt <- othermelt %>%
+  mutate(name = fct_relevel(factor(Sample), 
+            "HM5M1D0", "HM5M4D0", "HM5M9D0",
+            "HM5M1D3", "HM5M4D3", "HM5M9D3",
+            "HM5M1D5", "HM5M4D5", "HM5M9D5",
+            "HM5M1D5PF", "HM5M4D5PF", "HM5M9D5PF",
+            "HM5M2D0", "HM5M5D0", "HM5M7D0",
+            "HM5M2D3", "HM5M5D3", "HM5M7D3",
+            "HM5M2D5", "HM5M5D5", "HM5M7D5",
+            "HM5M2D5PF", "HM5M5D5PF", "HM5M7D5PF",
+            "HM5M3D0", "HM5M6D0", "HM5M8D0",
+            "HM5M3D3", "HM5M6D3", "HM5M8D3",
+            "HM5M3D5", "HM5M6D5", "HM5M8D5",
+            "HM5M3D5PF", "HM5M6D5PF", "HM5M8D5PF"))
+
+```
+
+
+```{r}
+othermelt <- othermelt %>%
+  mutate(Sample = fct_relevel(Sample, 
+            "HM5M1D5", "HM5M4D5", "HM5M9D5", 
+            "HM5M2D5", "HM5M5D5", "HM5M7D5", 
+            "HM5M3D5", "HM5M6D5", "HM5M8D5"))
+
+```
+
+```{r}
+
+try <- merge(othermelt, HMmeta, by="Sample")
+
+```
+
+```{r}
+
+ggplot(data=try, aes(x=Sample, y=Abundance, fill=Family), color="black") + geom_bar(aes(x=Sample, y=Abundance), stat="identity", position="stack") + guides(fill=guide_legend(ncol=2)) + theme(legend.text=element_text(size=5), legend.title = element_text(size = 15), axis.text.x = element_text(size = 5, angle=90)) + facet_wrap(~Treatment, scales = "free_x")
+```
+#Plot of only Pre-filtered DOM and controls
+```{r}
+
+PFonly <- subset(hm_data.scores, rownames==c("HM5M1D5PF", "HM5M4D5PF", "HM5M9D5PF", "HM5M2D5PF", "HM5M5D5PF", "HM5M7D5PF", "HM5M3D5PF", "HM5M6D5PF", "HM5M8D5PF"))
+
+
+
+ggplot() + 
+  geom_text(data=PFonly,aes(x=NMDS1,y=NMDS2, label=HMmeta$Sample),alpha=0.5) + 
+  geom_point(data=PFonly,aes(x=NMDS1,y=NMDS2,colour=as.character(HMmeta$Treatment)),size=4) + # add the point markers
+  coord_equal() +
+  theme_bw() + 
+  theme(axis.text.x = element_blank(),  # remove x-axis text
+        axis.text.y = element_blank(), # remove y-axis text
+        axis.ticks = element_blank(),  # remove axis ticks
+        axis.title.x = element_text(size=18), # remove x-axis labels
+        axis.title.y = element_text(size=18), # remove y-axis labels
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),  #remove major-grid labels
+        panel.grid.minor = element_blank(),  #remove minor-grid labels
+        plot.background = element_blank()) 
+
+```
+
+```{r}
+
+ggplot(data=PFonly, aes(x=Sample, y=Abundance, fill=Family), color="black") + geom_bar(aes(x=Sample, y=Abundance), stat="identity", position="stack") + guides(fill=guide_legend(ncol=2)) + theme(legend.text=element_text(size=5), legend.title = element_text(size = 15), axis.text.x = element_text(size = 5, angle=90)) + facet_wrap(~Treatment, scales = "free_x")
+```
+
+```{r}
+library(vegan)
+
+
+hm_otus_dist = as.matrix((vegdist(t(otu_table(hmprop)), "bray")))
+
+hmNMDS = metaMDS(hm_otus_dist)
+```
+
+```{r}
+plot(hmNMDS, type="text")
+```
+```{r}
+
+hm_data.scores <- as.data.frame(scores(hmNMDS))  #Using the scores function from vegan to extract the site scores and convert to a data.frame
+
+#write.csv(data.scores, "~/Desktop/Glycogen_nmds.csv", row.names=T)
+
+```
+
+```{r}
+
+HMmeta = read_table("~/Desktop/HM_meta.txt")
+
+```
+```{r}
+library(ggrepel)
+ggplot() + 
+  geom_text(data=hm_data.scores,aes(x=NMDS1,y=NMDS2, label=HMmeta$Sample),alpha=0.5) + 
+  geom_point(data=hm_data.scores,aes(x=NMDS1,y=NMDS2,colour=as.character(HMmeta$Treatment)),size=4) + # add the point markers
+  coord_equal() +
+  theme_bw() + 
+  theme(axis.text.x = element_blank(),  # remove x-axis text
+        axis.text.y = element_blank(), # remove y-axis text
+        axis.ticks = element_blank(),  # remove axis ticks
+        axis.title.x = element_text(size=18), # remove x-axis labels
+        axis.title.y = element_text(size=18), # remove y-axis labels
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),  #remove major-grid labels
+        panel.grid.minor = element_blank(),  #remove minor-grid labels
+        plot.background = element_blank()) 
+
+```
+
+
+##NMDS of only PF samples 
+```{r}
+library(vegan)
+
+
+pf <- read.csv("~/Desktop/HM5_ASV_relabundance_PF.csv", row.names = 1)
+
+#hmprop <- transform_sample_counts(pf, function(otu) otu/sum(otu))
+
+hm_otus_dist = as.matrix(vegdist(pf), "bray")
+
+hmNMDS = metaMDS(hm_otus_dist)
+```
+
+```{r}
+plot(hmNMDS, type="text")
+```
+```{r}
+
+hm_data.scores <- as.data.frame(scores(hmNMDS))  #Using the scores function from vegan to extract the site scores and convert to a data.frame
+
+#write.csv(data.scores, "~/Desktop/Glycogen_nmds.csv", row.names=T)
+
+```
+
+```{r}
+
+HMmeta = read_table("~/Desktop/PF_meta.txt")
+
+```
+```{r}
+library(ggrepel)
+ggplot() + 
+  geom_text_repel(data=hm_data.scores,aes(x=NMDS1,y=NMDS2, label=HMmeta$Sample),alpha=0.5) + 
+  geom_point(data=hm_data.scores,aes(x=NMDS1,y=NMDS2, colour=HMmeta$Treatment),size=4) 
+
+```
+
+
+```{r}
+
+ggplot(top200)
+
+```
+
+
+```{r}
+HMonlypela <- hmmelt[ which(hmmelt$Family=="f__Pelagibacteraceae"),]
+
+```
+
+```{r}
+
+
+HMmeta = read.csv("~/Desktop/HM_meta.csv")
+
+```
+
+```{r}
+
+HMonlypela <- HMonlypela %>%
+  mutate(Sample = fct_relevel(Sample, 
+            "HM5M1D0", "HM5M4D0", "HM5M9D0",
+            "HM5M1D3", "HM5M4D3", "HM5M9D3",
+            "HM5M1D5", "HM5M4D5", "HM5M9D5",
+            "HM5M1D5PF", "HM5M4D5PF", "HM5M9D5PF",
+            "HM5M2D5", "HM5M5D5", "HM5M7D5", 
+            "HM5M3D5", "HM5M6D5", "HM5M8D5"))
+
+```
+
+
+```{r}
+
+gg <- ggplot(data=HMonlypela, aes(x=Sample, y=Abundance, fill=Family))
+gg + geom_bar(aes(), stat="identity", position="stack") + ylim(0, 0.6) + theme(legend.text = element_text(size=10)) +  theme(axis.text.x = element_text(size = 10, angle = 90),
+        axis.text.y = element_text(size = 10),  
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) 
+
+
+```
+
+
+
+############################## community statistics ###################################
+```{r}
+library("vegan")
+library("RVAideMemoire") 
+```
+```{r}
+otutable <- read.delim('~/Desktop/HM5_relab_stats.txt', row.names=1)
+str(otutable)
+dist <- vegdist(otutable[,1:3487], method = 'bray')
+#betadisper
+bd <- betadisper(dist, otutable$Treatment)
+bd
+boxplot(bd)
+anova(bd)
+permutest(bd)
+#adonis
+otutable.adonis <- adonis(otutable[,1:3487] ~Treatment, data=otutable, permutations = 999, method = 'bray')
+otutable.adonis
+
+#pairwise.perm.manova
+pairperm <- pairwise.perm.manova(dist, otutable$Treatment, nperm=999, "bray")
+pairperm
+
+```
+
+
+###Heatmap 16s
+```{r}
+
+library(ggplot2)
+library(tidyverse)
+library(scales)
+library(dplyr)
+library(vegan)
+library(RColorBrewer)
+library(gplots)
+
+```
+
+#all OTU included in deseq analysis
+```{r}
+
+cts <- as.matrix(read.csv('~/Desktop/HM5_ASV_absabundance.csv', header = TRUE, row.names=1))
+
+```
+
+```{r}
+
+logall<-log(cts+1)
+
+heatmap.2(logall, col=my_palette, trace="none", cexRow = 0.4, cexCol=0.7, srtRow=45, lhei=c(2, 10))
+dev.off()
+```
+#Only top 200 most abundant 
+```{r}
+
+top200 <- as.matrix(read.csv('~/Desktop/HM5_ASV_absabundance_top200.csv', header = TRUE, row.names=1))
+
+```
+
+
+#Top 200, computer clustering of columns
+```{r}
+
+logall<-log(top200+1)
+
+heatmap.2(logall, col=my_palette, trace="none", cexRow = 0.4, cexCol=0.7, Colv=T, srtRow=45)
+
+```
+#Top 200 clustering by mesocosm treatment 
+```{r}
+
+logall<-log(top200+1)
+
+heatmap.2(logall, col=my_palette, trace="none", cexRow = 0.4, cexCol=0.4, Colv=F, srtRow=45)
+
+```
+
+```{r}
+
+tax <- read.csv("~/Desktop/HM5_taxonomy.csv", header=T, row.names = 1)
+
+```
+
+```{r}
+
+try <- merge(logall, tax, by = 'row.names')
+```
+
+```{r}
+
+row.names(try) <- make.names(try$taxonomy, unique=T)
+
+```
+
+```{r}
+
+fin <- try[,-1]
+
+```
+
+```{r}
+
+fin <- fin[,-10]
+
+```
+
+```{r}
+
+fin<-as.matrix(fin)
+
+```
+
+
+```{r}
+
+png(file = "~/Desktop/hm5_heatmap_cluster.png", height = 2500, width = 2000) 
+heatmap.2(fin, col=my_palette, trace="none", keysize=0.75, cexRow = 1, cexCol=1, Colv=T, margins = c(8,60), lhei=c(2, 30)) 
+dev.off()
+
+
+```

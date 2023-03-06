@@ -1,0 +1,505 @@
+---
+title: "Mesocosm Paper Environmental Plots"
+output:
+  pdf_document: default
+  html_notebook: default
+  html_document:
+    df_print: paged
+---
+```{r, echo=FALSE, message=FALSE,  warning=FALSE}
+
+library(ggplot2)
+library(tidyverse)
+library(scales)
+library(dplyr)
+library(vegan)
+library(RColorBrewer)
+library(gghighlight)
+library(egg)
+library(gridExtra)
+```
+
+```{r, echo=FALSE}
+
+
+distenv <- read.csv("~/Desktop/PICO_all_clean.csv", header=T)
+
+florence=distenv[366:475,]
+
+```
+
+###Figure showing chla, salinity and DOC after florence relative to average PICO concentrations 
+```{r}
+
+distenv2 = read.csv("~/Desktop/PICO_noHurr_clean.csv", header=TRUE)
+
+chloro=ggplot(distenv2, aes(x = YearDay, y = Chloro))+ 
+  geom_point(alpha=0.1, color="forestgreen")  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=Chloro), color="forestgreen") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  geom_smooth(data=distenv2, color="black", method="loess",span=0.2, size=0.5, level=0.95) + ylab("Chl a (mg/L)") + xlim(200, 365)
+
+doc=ggplot(distenv2, aes(x = YearDay, y = DOC))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=DOC), color="maroon") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv2, color="black", method="loess",span=0.2, size=0.5, level=0.95) + ylab("DOC (uM)") + xlim(200, 365)
+
+sal = ggplot(distenv2, aes(x = YearDay, y = Salinity))+ 
+  geom_point(alpha=0.1, color="blue")  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=Salinity), color="blue") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  geom_smooth(data=distenv2, color="black", method="loess",span=0.2, size=0.5, level=0.95) + ylab("Salinity (PSU)") + xlim(200, 365)
+
+svg("~/Desktop/HM_env_faceted_nohur.svg")
+ggarrange( sal, chloro,doc, 
+          labels = c("A", "B", "C"),
+          ncol = 1, nrow = 3)
+
+dev.off()
+``` 
+
+
+##Figure of FCM data over time by treatment
+```{r}
+
+hm5_meta = read.csv("~/Desktop/HM5_metadata.csv", header=T)
+
+hmfcm = read.csv("~/Desktop/HM5_FCM_data.csv", header=T)
+
+```
+
+
+
+```{r}
+syn = ggplot(hmfcm, aes(x = Day, y = Syn)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("Log(Synechococcus)") + 
+  geom_errorbar(aes(ymin=Syn-SynSD, ymax=Syn+SynSD), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=11),
+          axis.text.y = element_text(size=11))
+
+peuks = ggplot(hmfcm, aes(x = Day, y = Peuks)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("Log(Picoeukaryotes)") + 
+  geom_errorbar(aes(ymin=Peuks-PeuksSD, ymax=Peuks+PeuksSD), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=11),
+          axis.text.y = element_text(size=11))
+
+cyano = ggplot(hmfcm, aes(x = Day, y = Picocyano)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("Log(Picocyanobacteria)") + 
+  geom_errorbar(aes(ymin=Picocyano-PicocyanoSD, ymax=Picocyano+PicocyanoSD), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=11),
+          axis.text.y = element_text(size=11))
+
+bac = ggplot(hmfcm, aes(x = Day, y = Bacteria)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("Log(Bacteria)") + 
+  geom_errorbar(aes(ymin=Bacteria-BacteriaSD, ymax=Bacteria+BacteriaSD), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=11),
+          axis.text.y = element_text(size=11))
+```
+
+```{r}
+library(ggpubr)
+svg("~/Desktop/HM5_FCM.svg", height=8, width=14)
+ggarrange( syn, cyano,peuks,bac, 
+          labels = c("A", "B", "C", "D"),
+          ncol = 2, nrow = 2, common.legend=TRUE)
+
+dev.off()
+
+```
+
+##Line plots of chlorophyll, doc, temp, and BOD over time
+```{r}
+
+hmenv = read.csv("~/Desktop/HM5_env.csv", header=T)
+
+```
+
+```{r}
+chl = ggplot(hmenv, aes(x = Day, y = ChlAvg)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("Chla") + 
+  geom_errorbar(aes(ymin=ChlAvg-ChlSD, ymax=ChlAvg+ChlSD), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=11),
+          axis.text.y = element_text(size=11))
+
+svg("~/Desktop/HM5_chlorophyll.svg", height=5, width=10)
+chl
+dev.off()
+
+```
+
+```{r}
+
+
+bod = hmenv[c(1:3, 10:12, 16:18),]
+
+```
+
+```{r}
+chl = ggplot(hmenv, aes(x = Day, y = ChlAvg)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("Chla") + 
+  geom_errorbar(aes(ymin=ChlAvg-ChlSD, ymax=ChlAvg+ChlSD), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12))
+
+doc = ggplot(bod, aes(x = Day, y = DOCavg)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("DOC") + 
+  geom_errorbar(aes(ymin=DOCavg-DOCsd, ymax=DOCavg+DOCsd), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12))
+
+resp = ggplot(bod, aes(x = Day, y = ResAvg)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("Repiration") + 
+  geom_errorbar(aes(ymin=ResAvg-ResSD, ymax=ResAvg+ResSD), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12))
+
+grossphoto = ggplot(bod, aes(x = Day, y = PhotoAvg)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("Photosynthesis") + 
+  geom_errorbar(aes(ymin=PhotoAvg-PhotoSD, ymax=PhotoAvg+PhotoSD), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12))
+
+netprod = ggplot(bod, aes(x = Day, y = ProdAvg)) + 
+  geom_line(aes(color = Treatment))+
+  scale_color_manual(values = c("darkred", "blue", "forestgreen")) +
+   geom_point()+ ylab("Productivity") + 
+  geom_errorbar(aes(ymin=ProdAvg-ProdSD, ymax=ProdAvg+ProdSD), width=.1,
+                 position=position_dodge(0.05))+ theme_bw()+
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"), axis.text.x = element_text(size=12),
+          axis.text.y = element_text(size=12))
+
+
+```
+
+```{r}
+library(ggpubr)
+svg("~/Desktop/HM5_env.svg", height=12, width=14)
+ggarrange(chl, doc,resp,grossphoto, netprod,
+          labels = c("A", "B", "C", "D", "E"),
+          ncol = 2, nrow = 3, common.legend=TRUE, legend="bottom")
+
+dev.off()
+
+```
+
+
+
+
+
+
+
+
+
+
+#Code for testing aesthetics
+```{r}
+
+ggplot(distenv, aes(x = YearDay, y = Temp))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=Temp), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+```
+
+
+```{r}
+
+
+temp = ggplot(distenv, aes(x = YearDay, y = Temp))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=Temp), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+ph=ggplot(distenv, aes(x = YearDay, y = pH))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=pH), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+sal = ggplot(distenv, aes(x = YearDay, y = Salinity))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=Salinity), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+dic=ggplot(distenv, aes(x = YearDay, y = DIC))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=DIC), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+amm=ggplot(distenv, aes(x = YearDay, y = NH4))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=NH4), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+
+
+sil=ggplot(distenv, aes(x = YearDay, y = SiO4))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=SiO4), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+
+chloro=ggplot(distenv, aes(x = YearDay, y = Chloro))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=Chloro), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+bact = ggplot(distenv, aes(x = YearDay, y = LogBacteriaAvg))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=LogBacteriaAvg), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+
+cyano = ggplot(distenv, aes(x = YearDay, y = LogpicocyanobacteriaAvg))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=LogpicocyanobacteriaAvg), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+  
+
+
+euk = ggplot(distenv, aes(x = YearDay, y = LogpicophotoeukaryotesAvg))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=LogpicophotoeukaryotesAvg), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+
+syn=ggplot(distenv, aes(x = YearDay, y = LogSynechococcusAvg))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=LogSynechococcusAvg), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+
+doc=ggplot(distenv, aes(x = YearDay, y = DOC))+ 
+  geom_point(alpha=0.1)  + gghighlight(PICONumber==869, label_key = PICONumber)+theme_bw()+
+  geom_line(data=florence, aes(x=YearDay, y=DOC), color="red") + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+  geom_smooth(data=distenv, color="black", method="loess",span=0.2, size=0.5, level=0.95)
+ 
+```
+
+```{r}
+
+svg("~/Desktop/HM_environment_1.svg", width = 14, height = 24)
+ggarrange(temp, ph, sal, dic, amm, sil, chloro, bact, cyano, euk, syn,doc, 
+          labels = c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"),
+          ncol = 2, nrow = 6)
+
+
+dev.off()
+
+```
+
+
+
+
+```{r}
+
+svg("~/Desktop/HM_sal_doc.svg", height=4, width=12)
+
+ggarrange(sal,doc, 
+          labels = c("A", "B"),
+          ncol = 2, nrow = 1)
+
+
+dev.off()
+
+```
+
+#Salinity and DOC plot with LOESS smoothing
+```{r}
+
+
+ggplot(florence, aes(x=YearDay)) +
+  geom_line( aes(y=Salinity*10), color="blue") +
+  geom_line( aes(y=DOC), color="forestgreen") + 
+  scale_y_continuous(name = "DOC (uM)",sec.axis = sec_axis(~./10, name="Salinity (PSU"))+ 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+theme_bw() +
+  geom_smooth(data=distenv, aes(x=YearDay, y=DOC), color="black", method="loess",span=0.2, size=0.5, level=0.95)+
+  geom_smooth(data=distenv, aes(x=YearDay, y=Salinity*10), color="black", method="loess",span=0.2, size=0.5, level=0.95) + theme(panel.grid=element_blank())
+
+
+```
+
+#Salinity and DOC plot with points
+```{r}
+
+
+ggplot(florence, aes(x=YearDay)) +
+  geom_line( aes(y=Salinity*10), color="blue") +
+  geom_line( aes(y=DOC), color="forestgreen") + 
+  scale_y_continuous(name = "DOC (uM)",sec.axis = sec_axis(~./10, name="Salinity (PSU"))+ 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+theme_bw() +
+  geom_point(data=distenv, aes(x=YearDay, y=DOC), alpha=0.1, color="forestgreen")+
+  geom_point(data=distenv, aes(x=YearDay, y=Salinity*10), alpha=0.1, color="blue") + theme(panel.grid=element_blank()) 
+
+
+```
+
+```{r}
+
+
+ggplot(florence, aes(x=YearDay)) +
+  geom_line( aes(y=NH4), color="purple") +
+  geom_line( aes(y=Chloro*1000), color="green") + 
+  scale_y_continuous(name = "NH4 (uM)",sec.axis = sec_axis(~./1000, name="Chlorophyll"))+ 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+theme_bw() +
+  geom_point(data=distenv, aes(x=YearDay, y=NH4), alpha=0.1, color="purple")+
+  geom_point(data=distenv, aes(x=YearDay, y=Chloro*1000), alpha=0.1, color="green") + theme(panel.grid=element_blank()) 
+
+
+```
+
+
+
+###Making plot with three axes
+```{r}
+##Define each axis dataset
+
+time = florence$YearDay
+
+chl = florence$Chloro
+
+sal = florence$Salinity
+
+doc = florence$DOC
+
+```
+
+```{r}
+my_col1 = "#228B22"
+my_col_alpha1 <- adjustcolor(my_col1, alpha.f = 0.2)
+
+my_col2 = "#000000"
+my_col_alpha2 <- adjustcolor(my_col2, alpha.f = 0.2)
+
+my_col3 = "#0000FF"
+my_col_alpha3 <- adjustcolor(my_col3, alpha.f = 0.2)
+
+```
+
+
+```{r}
+
+svg("~/Desktop/HM_env3_zoom.svg", width=20, height=12)
+#Define Margins. The trick is to use give as much space possible on the left margin (second value)
+par(mar=c(8, 12, 4, 4) + 0.1)
+
+
+#Plot the first time series. Notice that you don’t have to draw the axis nor the labels
+
+
+plot(time, chl, axes=F, ylim=c(0,max(chl)), xlab="", ylab="",type="l",col="forestgreen", main="",xlim=c(180,365),lwd=3)
+points(distenv$YearDay,distenv$Chloro, pch=20, col=my_col_alpha1, cex=0.5)
+axis(2, ylim=c(0,max(chl)),col="forestgreen",lwd=2)
+mtext(2,text="Chlorophyll a (mg/L)",line=2)
+
+
+
+
+#Plot the second time series. The command par(new=T) is handy here. If you just need to plot two timeseries, you could also use the right vertical axis as well. In that case you have to substitute “2” with “4” in the functions axis() and mtext(). Notice that in both functions lines is increased so that the new axis and its label is placed to the left of the first one. You don’t need to increase the value if you use the right vertical axis.
+
+
+par(new=T)
+plot(time, doc, axes=F, ylim=c(0,max(doc)), xlab="", ylab="", 
+type="l",lty=1, main="",xlim=c(180,365),lwd=3, col="black")
+axis(2, ylim=c(0,max(doc)),lwd=2,line=3.5)
+points(distenv$YearDay,distenv$DOC, pch=20, col=my_col_alpha2, cex=0.5)
+mtext(2,text="DOC (uM)",line=5.5)
+
+
+#Plot the third time series. Again the line parameter are both further increased.
+
+
+par(new=T)
+plot(time, sal, axes=F, ylim=c(0,max(sal)), xlab="", ylab="", 
+type="l",lty=1, main="",xlim=c(180,365),lwd=3, col="blue")
+axis(2, ylim=c(0,max(sal)),lwd=2,line=7, col="blue")
+points(distenv$YearDay,distenv$Salinity, pch=20, col=my_col_alpha3, cex=0.5)
+mtext(2,text="Salinity (PSU)",line=9)
+
+
+#We can now draw the X-axis, which is of course shared by all the three time-series.
+
+
+axis(1,pretty(range(time),10))
+mtext("Year Day",side=1,col="black",line=2)
+
+
+dev.off()
+#And then plot the legend.
+
+
+#legend(x=20,y=12,legend=c("Chlorophyll a (mg/L)","DOC (uM)", "Salinity (PSU)"),lty=c(1,2,3))
+
+```
+
+###statistical test for difference between dilution and control on day 5 for FCM counts
+```{r}
+
+phyto = read.csv("~/Desktop/HM5_phyto_day5.csv", header=T)
+
+dil = subset(phyto, Treatment=="Dilution")
+dom = subset(phyto, Treatment=="DOM")
+con = subset(phyto, Treatment=="Control")
+
+```
+
+```{r}
+
+wilcox.test(dil$PicoCyano, con$PicoCyano, alternative="less")
+
+wilcox.test(dil$PicoEuks, con$PicoEuks,  alternative="less")
+
+wilcox.test(dil$Syn, con$Syn, alternative="less")
+
+wilcox.test(dil$Bacteria,con$Bacteria,  alternative="less")
+
+```
+```{r}
+
+hist(phyto$Syn)
+hist(phyto$PicoCyano)
+hist(phyto$PicoEuks)
+
+```
